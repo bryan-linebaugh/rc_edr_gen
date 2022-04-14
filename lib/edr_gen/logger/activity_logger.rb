@@ -6,7 +6,7 @@ module EdrGen
   # Logs activity data
   class ActivityLogger
     def initialize
-      @logger = Logger.new('activity.log')
+      @logger = Logger.new('log/activity.log')
     end
 
     def log(message)

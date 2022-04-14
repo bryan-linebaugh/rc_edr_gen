@@ -3,12 +3,13 @@
 require 'etc'
 require 'json'
 
-require_relative 'logger/activity_logger.rb'
+require 'edr_gen/logger/activity_logger'
 
 module EdrGen
   # Defines and executes file activities
   class FileCommand
     class InvalidFileActionError < StandardError; end
+    class InvalidFileError < StandardError; end
 
     def initialize(file_path, file_action)
       @logger = ActivityLogger.new
@@ -19,6 +20,11 @@ module EdrGen
 
     def run
       timestamp = Time.now.strftime('%Y-%m-%d %H:%M:%S.%L')
+
+      if !File.exist?(@file_path) && (@file_action == 'modify' || @file_action == 'delete')
+        raise InvalidFileError
+      end
+
       pid = Process.spawn("#{@command} #{@file_path}")
       Process.detach(pid)
 
@@ -35,8 +41,10 @@ module EdrGen
 
     def get_command(file_action)
       case file_action
-      when 'create', 'modify'
+      when 'create'
         'touch'
+      when 'modify'
+        'touch -c'
       when 'delete'
         'rm'
       else
@@ -49,12 +57,12 @@ module EdrGen
       Etc.getpwuid(euid).name
     end
 
-    def format_activity(timestamp, process)
+    def format_activity(timestamp, process_details)
       {
         timestamp: timestamp,
         action: @file_action,
         path: @file_path,
-        process: process
+        process: process_details
       }.to_json
     end
   end
